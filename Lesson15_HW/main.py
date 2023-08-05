@@ -1,4 +1,4 @@
-import telebot, Lesson15_HW_DBWork as db, Lesson15_HW_buttons as bt
+import telebot, DBWork as db, Buttons as bt
 from geopy import Nominatim
 
 bot = telebot.TeleBot('6694535877:AAE4ERdZlUtXdz9l1u98en6Oud5LZYzd8xU')

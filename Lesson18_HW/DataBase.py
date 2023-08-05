@@ -1,7 +1,7 @@
 import sqlite3
 
 # Connected to DataBase
-connection = sqlite3.connect('Lesson17_DataBase.db', check_same_thread=False)
+connection = sqlite3.connect('MyDB.db', check_same_thread=False)
 
 # Translator from sql to python
 sql = connection.cursor()
@@ -34,11 +34,6 @@ def checker(id):
         return False
 
 
-def return_name(id):
-    name = sql.execute('SELECT name FROM users WHERE id=?', (id,)).fetchone()
-    return name[0]
-
-
 def commit_name(new_info, id):
     sql.execute(F'UPDATE users SET name="{new_info}" WHERE id={id};')
     connection.commit()
@@ -68,12 +63,6 @@ def show_info(id):
     return info
 
 
-# Print info about all products
-def show_all():
-    all_products = sql.execute('SELECT * FROM products;').fetchall()
-    return all_products
-
-
 # Print id of products
 def get_pr_name_id():
     products = sql.execute('SELECT pr_name FROM products;').fetchall()
@@ -97,30 +86,66 @@ def add_to_cart(user_id, pr_name, pr_quantity, total=0):
 
 
 # Clear cart
-def clean_cart(id):
-    pr_name = sql.execute('SELECT pr_name FROM cart WHERE user_id=?', (id,)).fetchone()
-    amount = sql.execute('SELECT pr_amount FROM products WHERE pr_name=?', (pr_name,)).fetchone()
-    pr_quantity = sql.execute('SELECT pr_quantity FROM cart WHERE user_id=?', (id,)).fetchone()
-    sql.execute(f'UPDATE products SET pr.amount={amount(0) + pr_quantity} WHERE pr_name = ?;', (pr_name,))
-    sql.execute('DELETE FROM cart WHERE id=?;', (id,))
-    connection.commit()
+def clear_cart(id):
+    if sql.execute('SELECT * FROM cart WHERE user_id=?;', (id,)).fetchone() is None:
+        return 'None'
+    else:
+        pr_name = sql.execute('SELECT user_pr FROM cart WHERE user_id=?;', (id,)).fetchone()
+        amount = sql.execute('SELECT pr_amount FROM products WHERE pr_name=?;', (pr_name[0],)).fetchone()
+        pr_quantity = sql.execute('SELECT pr_quantity FROM cart WHERE user_id=?;', (id,)).fetchone()
+        sql.execute(f'UPDATE products SET pr_amount={amount[0] + pr_quantity[0]} WHERE pr_name = ?;', (pr_name[0],))
+        sql.execute('DELETE FROM cart WHERE user_id=?;', (id,))
+        connection.commit()
+
+
+def send_cart(id):
+    if sql.execute('SELECT * FROM cart WHERE user_id=?;', (id,)).fetchone() is None:
+        return 'None'
+    else:
+        return 'Not None'
 
 
 # Print cart
 def show_cart(id):
-    cart = sql.execute('SELECT pr_name, pr_quantity, total FROM cart WHERE user_id=?', (id,)).fetchone()
+    cart = sql.execute('SELECT pr_name, pr_quantity, total FROM cart WHERE user_id=?;', (id,)).fetchone()
     return cart
 
 
 def return_price(name):
-    price = sql.execute('SELECT pr_price FROM products WHERE pr_name=?', (name,)).fetchone()
+    price = sql.execute('SELECT pr_price FROM products WHERE pr_name=?;', (name,)).fetchone()
     return price[0]
 
 
+def return_name(id):
+    name = sql.execute('SELECT * FROM users WHERE id=?', (id,)).fetchone()
+    return name
+
+
+def unite_pr(money):
+    text = ''.join(reversed(str(money)))
+    split_money_3 = [text[i:i + 3] for i in range(0, len(text), 3)]
+    split_money_3.reverse()
+    split_money = []
+    for i in split_money_3:
+        split_money.append(''.join(reversed(i)))
+    return ' '.join(split_money)
+
+
+def print_cart(id):
+    order = sql.execute('SELECT * FROM cart WHERE user_id=?;', (id,)).fetchall()
+    total_sum = 0
+    pr_order = 'Cart:\n'
+    for i in order:
+        pr_order += f'{i[1]} x{i[2]} - {unite_pr(int(i[3]))}sum\n'
+        total_sum += i[3]
+    pr_order += f"\nTotal - {unite_pr(int(total_sum))}sum\n\n"
+    return pr_order
+
+
 # sql.execute('INSERT INTO products(pr_name, pr_amount, pr_price, pr_des, pr_photo) '
-#             'VALUES(?, ?, ?, ?, ?);', ('Burger', '5000', '32990', "smth",
+#             'VALUES(?, ?, ?, ?, ?);', ('Burger', '5000', '31000', "smth",
 #                                        "https://i.postimg.cc/YS0vpnt5/image.png"))
 # sql.execute('INSERT INTO products(pr_name, pr_amount, pr_price, pr_des, pr_photo) '
-#             'VALUES(?, ?, ?, ?, ?);', ('Lavash', '5000', '26.990', "smth",
+#             'VALUES(?, ?, ?, ?, ?);', ('Lavash', '5000', '26000', "smth",
 #                                        "https://i.postimg.cc/NfYRd6Fk/da9581ee81134ea59740836aaf9e4a57-e1580887902436.jpg"))
 # connection.commit()

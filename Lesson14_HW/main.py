@@ -1,4 +1,4 @@
-import json, telebot, requests, Lesson14_HW_buttons as bt
+import json, telebot, requests, Buttons as bt
 bot = telebot.TeleBot('5268293106:AAH5SmdhhfXmBpyb9yW0AG2QCobmPOriUQM') # @testkhnbot - bot id
 
 

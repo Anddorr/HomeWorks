@@ -1,4 +1,4 @@
-import telebot, Lesson16_DBWork as db, Lesson16_HW_buttons as bt
+import telebot, DBWork as db, Buttons as bt
 from geopy import Nominatim
 
 # Connect to bot

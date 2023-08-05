@@ -1,9 +1,10 @@
-import telebot, Lesson17_DBWork as db, Lesson17_Buttons as bt
+import telebot, DataBase as db, Buttons as bt
 from geopy import Nominatim
 
 # Connect to bot
 bot = telebot.TeleBot('6694535877:AAE4ERdZlUtXdz9l1u98en6Oud5LZYzd8xU')
-geolocator = Nominatim(user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36')
+geolocator = Nominatim(user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+                                  'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36')
 users = {}
 
 
@@ -15,11 +16,12 @@ def start_message(message):
     # Check
     check_user = db.checker(user_id)
     if check_user:
-        bot.send_message(user_id, f'Wellcome {db.return_name(user_id)}!')
+        bot.send_message(user_id, f'Wellcome {db.return_name(user_id)[1]}!')
         bot.send_message(user_id, 'What next?', reply_markup=bt.purchase_or_help())
         bot.register_next_step_handler(message, purchase_or_help)
     else:
-        bot.send_message(user_id, 'Greetings! Start registration, enter your name:', reply_markup=telebot.types.ReplyKeyboardRemove())
+        bot.send_message(user_id, 'Greetings! Start registration, enter your name:',
+                         reply_markup=telebot.types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, get_name)
 
 
@@ -33,7 +35,7 @@ def get_name(message):
 def get_num(message, user_name):
     if message.contact:
         user_num = message.contact.phone_number
-        bot.send_message(user_id, 'Now send location: ', reply_markup=bt.loc_button())
+        bot.send_message(user_id, 'Now send location:', reply_markup=bt.loc_button())
         bot.register_next_step_handler(message, get_loc, user_name, user_num)
     else:
         bot.send_message(user_id, 'Send your contact about button!')
@@ -111,36 +113,97 @@ def back_to_menu(message):
 
 # Function for choose amount of product
 @bot.callback_query_handler(lambda call: (call.data,) in db.get_pr_name_id())
-def get_user_product(call):
+def choosing_count_handler(call):
     chat_id = call.message.chat.id
     users[chat_id] = {'pr_name': call.data, 'pr_count': 1}
     message_id = call.message.message_id
-    bot.edit_message_text('Choose count', chat_id=chat_id, message_id=message_id, reply_markup=bt.choose_product_count())
+    if db.send_cart(user_id) == 'None':
+        bot.edit_message_text('Choose count', chat_id=chat_id, message_id=message_id, reply_markup=bt.choose_product_count())
+    else:
+        bot.edit_message_text(f'{db.print_cart(user_id)}Choose count', chat_id=chat_id, message_id=message_id, reply_markup=bt.choose_product_count())
 
 
 # Function for choose action with product
 @bot.callback_query_handler(lambda call: call.data in ['back', 'to_cart', 'increment', 'decrement'])
-def get_user_count(call):
+def products_count_handler(call):
     chat_id = call.message.chat.id
     if call.data == 'increment':
         count = users[chat_id]['pr_count']
         users[chat_id]['pr_count'] += 1
-        bot.edit_message_reply_markup(chat_id=chat_id, message_id=call.message.message_id, reply_markup=bt.choose_product_count(count, 'increment'))
+        bot.edit_message_reply_markup(chat_id=chat_id, message_id=call.message.message_id,
+                                      reply_markup=bt.choose_product_count(count, 'increment'))
     elif call.data == 'decrement':
         count = users[chat_id]['pr_count']
         users[chat_id]['pr_count'] -= 1
-        bot.edit_message_reply_markup(chat_id=chat_id, message_id=call.message.message_id, reply_markup=bt.choose_product_count(count, 'decrement'))
+        bot.edit_message_reply_markup(chat_id=chat_id, message_id=call.message.message_id,
+                                      reply_markup=bt.choose_product_count(count, 'decrement'))
     elif call.data == 'back':
         products = db.get_pr_id()
-        bot.edit_message_text('Choose button on menu:', chat_id=chat_id, message_id=call.message.message_id, reply_markup=bt.main_menu_buttons(products))
+        if db.send_cart(user_id) == 'None':
+            bot.edit_message_text('Choose button on menu:', chat_id=chat_id, message_id=call.message.message_id,
+                                  reply_markup=bt.main_menu_buttons(products))
+        else:
+            bot.edit_message_text(f'{db.print_cart(user_id)}Choose button on menu:', chat_id=chat_id, message_id=call.message.message_id,
+                                  reply_markup=bt.main_menu_buttons(products))
     elif call.data == 'to_cart':
         products = db.get_pr_id()
         product_count = users[chat_id]['pr_count']
         user_product = users[chat_id]['pr_name']
         user_total = db.return_price(user_product) * product_count
         db.add_to_cart(chat_id, user_product, product_count, user_total)
-        bot.edit_message_text('Your product added to cart\nDo you want anything else:', chat_id=chat_id, message_id=call.message.message_id,
-                              reply_markup=bt.main_menu_buttons(products))
+        if db.send_cart(user_id) == 'None':
+            bot.edit_message_text('Your product added to cart\nDo you want anything else:', chat_id=chat_id,
+                                  message_id=call.message.message_id, reply_markup=bt.main_menu_buttons(products))
+        else:
+            bot.edit_message_text(f'{db.print_cart(user_id)}Your product added to cart\nDo you want anything else:',
+                                  chat_id=chat_id, message_id=call.message.message_id,
+                                  reply_markup=bt.main_menu_buttons(products))
+
+
+@bot.callback_query_handler(lambda call: call.data == 'cart')
+def to_cart(call):
+    chat_id = call.message.chat.id
+    message_id = call.message.message_id
+    if db.send_cart(user_id) == 'None':
+        bot.edit_message_text('Open cart!', chat_id=chat_id, message_id=message_id, reply_markup=bt.cart_button())
+    else:
+        bot.edit_message_text(f'{db.print_cart(user_id)}Open cart!', chat_id=chat_id, message_id=message_id, reply_markup=bt.cart_button())
+
+
+# Function for button cart
+@bot.callback_query_handler(lambda call: call.data in ['order', 'clear', 'back'])
+def cart_handler(call):
+    chat_id = call.message.chat.id
+    message_id = call.message.message_id
+    products = db.get_pr_id()
+    if call.data == 'clear':
+        if db.clear_cart(user_id) == 'None':
+            bot.edit_message_text('Cart is already empty! Start purchase', chat_id=chat_id, message_id=message_id,
+                                  reply_markup=bt.main_menu_buttons(products))
+        else:
+            bot.edit_message_text('Cart is clear! Are you want smth else?', chat_id=chat_id, message_id=message_id,
+                                  reply_markup=bt.main_menu_buttons(products))
+    elif call.data == 'back':
+        if db.send_cart(user_id) == 'None':
+            bot.edit_message_text('Choose button on menu:', chat_id=chat_id, message_id=call.message.message_id,
+                                  reply_markup=bt.main_menu_buttons(products))
+        else:
+            bot.edit_message_text(f'{db.print_cart(user_id)}Choose button on menu:', chat_id=chat_id, message_id=call.message.message_id,
+                                  reply_markup=bt.main_menu_buttons(products))
+    elif call.data == 'order':
+        if db.send_cart(user_id) == 'None':
+            bot.edit_message_text('Cart is already empty! Start purchase', chat_id=chat_id, message_id=message_id,
+                                  reply_markup=bt.main_menu_buttons(products))
+        elif db.send_cart(user_id) == 'Not None':
+            client = db.return_name(user_id)
+            bot.send_message(1266833988, f'New order:\n'
+                                         f'Name - {client[1]} \n'
+                                         f'Number - {client[2]} \n'
+                                         f'Location - {client[3]}\n\n'
+                                         f'{db.print_cart(user_id)}')
+            bot.edit_message_text('Order is order and will be delivered soon!', chat_id=chat_id, message_id=message_id,
+                                  reply_markup=telebot.types.Rem)
+            db.clear_cart(user_id)
 
 
 bot.polling(none_stop=True)

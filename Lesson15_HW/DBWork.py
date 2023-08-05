@@ -1,7 +1,7 @@
 import sqlite3
 
 # Connected to DataBase
-connection = sqlite3.connect('Lesson15_DB.db', check_same_thread=False)
+connection = sqlite3.connect('MyDB.db', check_same_thread=False)
 
 # Translator from sql to python
 sql = connection.cursor()
